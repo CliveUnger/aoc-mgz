@@ -5,6 +5,7 @@ import re
 import struct
 import uuid
 import zlib
+from typing import Any
 
 from mgz.util import get_version, unpack, Version, as_hex
 
@@ -253,7 +254,7 @@ def parse_map(data, version, save):
     )
 
 
-def parse_scenario(data, num_players, version, save):
+def parse_scenario(data: io.BytesIO, num_players: int, version: Version, save: float) -> dict[str, Any]:
     """Parse scenario section - dispatches to version-specific parser."""
     if version is Version.DE:
         return _parse_scenario_de(data, save)
@@ -263,7 +264,7 @@ def parse_scenario(data, num_players, version, save):
         return _parse_scenario_userpatch(data, save)
 
 
-def _parse_scenario_de(data, save):
+def _parse_scenario_de(data: io.BytesIO, save: float) -> dict[str, Any]:
     """Parse DE-specific scenario section."""
     next_uid, scenario_version = unpack('<II', data)
     if save >= 61.5:
@@ -348,7 +349,7 @@ def _parse_scenario_de(data, save):
     )
 
 
-def _parse_scenario_hd(data, save):
+def _parse_scenario_hd(data: io.BytesIO, save: float) -> dict[str, Any]:
     """Parse HD-specific scenario section."""
     next_uid, scenario_version = unpack('<II', data)
     if save >= 61.5:
@@ -384,7 +385,7 @@ def _parse_scenario_hd(data, save):
     )
 
 
-def _parse_scenario_userpatch(data, save):
+def _parse_scenario_userpatch(data: io.BytesIO, save: float) -> dict[str, Any]:
     """Parse Userpatch-specific scenario section."""
     next_uid, scenario_version = unpack('<II', data)
     if save >= 61.5:
