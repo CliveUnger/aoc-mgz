@@ -295,7 +295,9 @@ def _parse_scenario_de(data: io.BytesIO, save: float) -> dict[str, Any]:
     data.seek(196 + 16 * 28 + 12672 + 196 + 88, 1)  # skip player data and structures
     map_id, difficulty_id = unpack('<II', data)
     remainder = data.read()
-    if save >= 66.3:
+    if save >= 67.5:
+        settings_version = 4.9
+    elif save >= 66.3:
         settings_version = 4.5
     elif save >= 64.3:
         settings_version = 4.1
