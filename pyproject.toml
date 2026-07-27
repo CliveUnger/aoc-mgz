@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mgz"
+version = "1.8.51"
+requires-python = ">=3.12"
+dependencies = ["aocref>=2.0.35", "construct==2.8.16", "tabulate>=0.9.0"]
+
+[dependency-groups]
+dev = ["ruff>=0.16.0", "ty>=0.0.63"]
+
+[tool.ruff]
+line-length = 120
+# Exclude all pre-existing repo files
+exclude = [
+    "mgz/__init__.py",
+    "mgz/body/",
+    "mgz/cli.py",
+    "mgz/common/",
+    "mgz/const.py",
+    "mgz/enums.py",
+    "mgz/fast/",
+    "mgz/header/",
+    "mgz/model/__init__.py",
+    "mgz/model/compat.py",
+    "mgz/model/definitions.py",
+    "mgz/model/inputs.py",
+    "mgz/reference.py",
+    "mgz/summary/",
+    "mgz/util.py",
+    "tests/",
+    "setup.py",
+]
+
+[tool.ty.src]
+# Only type-check code we own.
+exclude = [
+    "mgz/__init__.py",
+    "mgz/body/",
+    "mgz/cli.py",
+    "mgz/common/",
+    "mgz/const.py",
+    "mgz/enums.py",
+    "mgz/fast/",
+    "mgz/header/",
+    "mgz/model/__init__.py",
+    "mgz/model/compat.py",
+    "mgz/model/inputs.py",
+    "mgz/reference.py",
+    "mgz/summary/",
+    "mgz/util.py",
+    "tests/",
+    "setup.py",
+]
+
