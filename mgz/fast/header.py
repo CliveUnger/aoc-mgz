@@ -260,10 +260,10 @@ def parse_scenario(data: io.BytesIO, num_players: int, version: Version, save: f
         return _parse_scenario_de(data, save)
     elif version is Version.HD:
         return _parse_scenario_hd(data, save)
-    elif version is Version.USERPATCH15:
-        return _parse_scenario_userpatch(data, save)
     else:
-        raise RuntimeError(f"scenario parsing not supported for {version}")
+        # Currently treat all other versions identically
+        # however it could be useful to split them as needed
+        return _parse_scenario_generic(data, save)
 
 
 def _parse_scenario_de(data: io.BytesIO, save: float) -> dict[str, Any]:
@@ -366,8 +366,8 @@ def _parse_scenario_hd(data: io.BytesIO, save: float) -> dict[str, Any]:
     )
 
 
-def _parse_scenario_userpatch(data: io.BytesIO, save: float) -> dict[str, Any]:
-    """Parse Userpatch-specific scenario section."""
+def _parse_scenario_generic(data: io.BytesIO, save: float) -> dict[str, Any]:
+    """Parse scenario sections for all other versions."""
     data.seek(8, 1)  # next_uid, scenario_version
     if save >= 61.5:
         data.seek(72, 1)
