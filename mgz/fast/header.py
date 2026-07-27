@@ -268,12 +268,24 @@ def parse_scenario(data: io.BytesIO, num_players: int, version: Version, save: f
 
 def _parse_scenario_de(data: io.BytesIO, save: float) -> dict[str, Any]:
     """Parse DE-specific scenario section."""
-    data.seek(8, 1)  # next_uid, scenario_version
-    if save >= 61.5:
-        data.seek(72, 1)
-    data.seek(4447 + 102, 1)
-    scenario_filename = aoc_string(data)
-    data.seek(24, 1)
+    if save >= 66.6:
+        data.seek(8 + 4 + 16 * 256 + 16 * 4, 1)  # scenario version, unknown, player names, string ids
+        # 66.6 replaced the fixed-size player table with de_string pairs
+        for _ in range(0, 16):
+            data.seek(8, 1)
+            de_string(data)
+            de_string(data)
+            data.seek(4, 1)
+        data.seek(5 + 4, 1)  # unknown, elapsed time
+        scenario_filename = aoc_string(data)
+        data.seek(64 + 68 + 20, 1)
+    else:
+        data.seek(8, 1)  # next_uid, scenario_version
+        if save >= 61.5:
+            data.seek(72, 1)
+        data.seek(4447 + 102, 1)
+        scenario_filename = aoc_string(data)
+        data.seek(24, 1)
     instructions = aoc_string(data)
     for _ in range(0, 9):
         aoc_string(data)

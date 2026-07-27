@@ -72,6 +72,26 @@ class TestFastDEScenarioWithTriggers(unittest.TestCase):
         self.assertEqual(len(players), 3)
 
 
+class TestFastDE68(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        with open('tests/recs/de-68.0.aoe2record', 'rb') as handle:
+            cls.data = parse(handle)
+
+    def test_version(self):
+        self.assertEqual(self.data['version'], Version.DE)
+        self.assertEqual(self.data['save_version'], 68.0)
+
+    def test_players(self):
+        players = self.data.get('players')
+        self.assertEqual(len(players), 6)
+
+    def test_map(self):
+        self.assertEqual(self.data['map']['dimension'], 200)
+        self.assertEqual(self.data['de']['rms_map_id'], 9)
+
+
 class TestFastHD(unittest.TestCase):
 
     @classmethod
