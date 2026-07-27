@@ -1,13 +1,13 @@
 """Fast(er) parsing for recorded game headers."""
-import io
 import hashlib
+import io
 import re
 import struct
 import uuid
 import zlib
-from typing import Any
+from typing import Any, cast
 
-from mgz.util import get_version, unpack, Version, as_hex
+from mgz.util import Version, as_hex, get_version, unpack
 
 PLAYER_END = b'\xff\xff\xff\xff\xff\xff\xff\xff.\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0b'
 ZLIB_WBITS = -15
@@ -260,32 +260,27 @@ def parse_scenario(data: io.BytesIO, num_players: int, version: Version, save: f
         return _parse_scenario_de(data, save)
     elif version is Version.HD:
         return _parse_scenario_hd(data, save)
-    else:
+    elif version is Version.USERPATCH15:
         return _parse_scenario_userpatch(data, save)
+    else:
+        raise RuntimeError(f"scenario parsing not supported for {version}")
 
 
 def _parse_scenario_de(data: io.BytesIO, save: float) -> dict[str, Any]:
     """Parse DE-specific scenario section."""
-    next_uid, scenario_version = unpack('<II', data)
+    data.seek(8, 1)  # next_uid, scenario_version
     if save >= 61.5:
-        data.read(72)
-    data.read(4447)
-    data.read(102)
+        data.seek(72, 1)
+    data.seek(4447 + 102, 1)
     scenario_filename = aoc_string(data)
-    data.read(24)
+    data.seek(24, 1)
     instructions = aoc_string(data)
     for _ in range(0, 9):
         aoc_string(data)
-    data.read(78)
+    data.seek(78, 1)
     for _ in range(0, 16):
         aoc_string(data)
-    data.read(196)
-    for _ in range(0, 16):
-        data.read(24)
-        data.read(4)
-    data.read(12672)
-    data.read(196)
-    data.read(88)
+    data.seek(196 + 16 * 28 + 12672 + 196 + 88, 1)  # skip player data and structures
     map_id, difficulty_id = unpack('<II', data)
     remainder = data.read()
     if save >= 66.3:
@@ -313,33 +308,28 @@ def _parse_scenario_de(data: io.BytesIO, save: float) -> dict[str, Any]:
     end = remainder.find(struct.pack('<d', settings_version)) + 8
     data.seek(end - len(remainder), 1)
 
-    data.read(1)
-    n_triggers = unpack("<I", data)
+    data.seek(1, 1)
+    n_triggers = cast(int, unpack("<I", data))
 
     for _ in range(n_triggers):
-        data.read(22)
-        data.read(4)
+        data.seek(22 + 4, 1)
 
-        description = int_prefixed_string(data)
-        name = int_prefixed_string(data)
-        short_description = int_prefixed_string(data)
+        int_prefixed_string(data)  # description
+        int_prefixed_string(data)  # name
+        int_prefixed_string(data)  # short_description
 
-        n_effects = unpack("<I", data)
+        n_effects = cast(int, unpack("<I", data))
 
         for _ in range(n_effects):
-            data.read(216)
+            data.seek(216, 1)
+            int_prefixed_string(data)  # text
+            int_prefixed_string(data)  # sound
 
-            text = int_prefixed_string(data)
-            sound = int_prefixed_string(data)
+        data.seek(n_effects * 4, 1)  # trigger_list_order
+        n_condition = cast(int, unpack("<I", data))
+        data.seek(n_condition * 125, 1)
 
-        data.read(n_effects * 4)
-        n_condition = unpack("<I", data)
-
-        data.read(n_condition * 125)
-
-    trigger_list_order = unpack(f"<{n_triggers}I", data)
-
-    data.read(1032)  # default!
+    data.seek(n_triggers * 4 + 1032, 1)  # trigger_list_order + default
 
     return dict(
         map_id=map_id,
@@ -351,27 +341,18 @@ def _parse_scenario_de(data: io.BytesIO, save: float) -> dict[str, Any]:
 
 def _parse_scenario_hd(data: io.BytesIO, save: float) -> dict[str, Any]:
     """Parse HD-specific scenario section."""
-    next_uid, scenario_version = unpack('<II', data)
+    data.seek(8, 1)  # next_uid, scenario_version
     if save >= 61.5:
-        data.read(72)
-    data.read(4447)
+        data.seek(72, 1)
+    data.seek(4447, 1)
     scenario_filename = None
     instructions = aoc_string(data)
     for _ in range(0, 9):
         aoc_string(data)
-    data.read(78)
+    data.seek(78, 1)
     for _ in range(0, 16):
         aoc_string(data)
-    data.read(196)
-    for _ in range(0, 16):
-        data.read(24)
-        data.read(4)
-    data.read(12672)
-    for _ in range(0, 16):
-        data.read(332)
-    data.read(644)
-    data.read(88)
-    data.read(16)
+    data.seek(196 + 16 * 28 + 12672 + 16 * 332 + 748, 1)  # skip player data and structures
     map_id, difficulty_id = unpack('<II', data)
     remainder = data.read()
     end = remainder.find(b'\x9a\x99\x99\x99\x99\x99\xf9\x3f') + 13
@@ -387,24 +368,18 @@ def _parse_scenario_hd(data: io.BytesIO, save: float) -> dict[str, Any]:
 
 def _parse_scenario_userpatch(data: io.BytesIO, save: float) -> dict[str, Any]:
     """Parse Userpatch-specific scenario section."""
-    next_uid, scenario_version = unpack('<II', data)
+    data.seek(8, 1)  # next_uid, scenario_version
     if save >= 61.5:
-        data.read(72)
-    data.read(4447)
+        data.seek(72, 1)
+    data.seek(4447, 1)
     scenario_filename = None
     instructions = aoc_string(data)
     for _ in range(0, 9):
         aoc_string(data)
-    data.read(78)
+    data.seek(78, 1)
     for _ in range(0, 16):
         aoc_string(data)
-    data.read(196)
-    for _ in range(0, 16):
-        data.read(24)
-    data.read(12672)
-    for _ in range(0, 16):
-        data.read(332)
-    data.read(88)
+    data.seek(196 + 16 * 24 + 12672 + 16 * 332 + 88, 1)  # skip player data and structures
     map_id, difficulty_id = unpack('<II', data)
     remainder = data.read()
     end = remainder.find(b'\x9a\x99\x99\x99\x99\x99\xf9\x3f') + 13
@@ -445,7 +420,7 @@ def parse_de(data, version, save, skip=False):
         dlc_ids.append(unpack('<I', data))
     data.read(4)
     if save >= 61.5:
-        map_dimension = unpack('<I', data)
+        data.seek(4, 1)  # map_dimension
     else:
         difficulty_id = unpack('<I', data)
     data.read(4)
