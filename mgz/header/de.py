@@ -1,12 +1,26 @@
 """Definitive Edition structure."""
 
 from construct import (
-    Struct, Int32ul, Float32l, Array, Padding, Flag, If,
-    Byte, Int16ul, Bytes, Int32sl, Peek, Const, RepeatUntil,
-    Int64ul, Computed, IfThenElse
+    Array,
+    Byte,
+    Bytes,
+    Computed,
+    Const,
+    Flag,
+    Float32l,
+    If,
+    IfThenElse,
+    Int16ul,
+    Int32sl,
+    Int32ul,
+    Int64ul,
+    Padding,
+    Peek,
+    RepeatUntil,
+    Struct,
 )
 
-from mgz.enums import VictoryEnum, ResourceLevelEnum, AgeEnum, PlayerTypeEnum, DifficultyEnum
+from mgz.enums import AgeEnum, DifficultyEnum, PlayerTypeEnum, ResourceLevelEnum, VictoryEnum
 from mgz.util import find_save_version
 
 # pylint: disable=invalid-name, bad-continuation
@@ -45,6 +59,7 @@ player = Struct(
     "custom_ai"/Flag,
     If(lambda ctx: find_save_version(ctx) >= 25.06, "handicap"/Bytes(8)),
     If(lambda ctx: find_save_version(ctx) >= 64.3, "unknown_de_64_3" / Int32ul),
+    "unknown_de_68"/If(lambda ctx: find_save_version(ctx) >= 67.5, de_string),
 )
 
 string_block = Struct(
@@ -178,5 +193,6 @@ de = "de"/Struct(
     "ver37"/If(lambda ctx: find_save_version(ctx) >= 37, Struct(
         Int32ul,
         Int32ul
-    ))
+    )),
+    If(lambda ctx: find_save_version(ctx) >= 67.5, Bytes(8)),
 )
