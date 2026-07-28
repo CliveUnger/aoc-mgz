@@ -268,12 +268,24 @@ def parse_scenario(data: io.BytesIO, num_players: int, version: Version, save: f
 
 def _parse_scenario_de(data: io.BytesIO, save: float) -> dict[str, Any]:
     """Parse DE-specific scenario section."""
-    data.seek(8, 1)  # next_uid, scenario_version
-    if save >= 61.5:
-        data.seek(72, 1)
-    data.seek(4447 + 102, 1)
-    scenario_filename = aoc_string(data)
-    data.seek(24, 1)
+    if save >= 66.6:
+        data.seek(8 + 4 + 16 * 256 + 16 * 4, 1)  # scenario version, unknown, player names, string ids
+        # 66.6 replaced the fixed-size player table with de_string pairs
+        for _ in range(0, 16):
+            data.seek(8, 1)
+            de_string(data)
+            de_string(data)
+            data.seek(4, 1)
+        data.seek(5 + 4, 1)  # unknown, elapsed time
+        scenario_filename = aoc_string(data)
+        data.seek(64 + 68 + 20, 1)
+    else:
+        data.seek(8, 1)  # next_uid, scenario_version
+        if save >= 61.5:
+            data.seek(72, 1)
+        data.seek(4447 + 102, 1)
+        scenario_filename = aoc_string(data)
+        data.seek(24, 1)
     instructions = aoc_string(data)
     for _ in range(0, 9):
         aoc_string(data)
@@ -283,7 +295,9 @@ def _parse_scenario_de(data: io.BytesIO, save: float) -> dict[str, Any]:
     data.seek(196 + 16 * 28 + 12672 + 196 + 88, 1)  # skip player data and structures
     map_id, difficulty_id = unpack('<II', data)
     remainder = data.read()
-    if save >= 66.3:
+    if save >= 67.5:
+        settings_version = 4.9
+    elif save >= 66.3:
         settings_version = 4.5
     elif save >= 64.3:
         settings_version = 4.1
@@ -489,6 +503,8 @@ def parse_de(data, version, save, skip=False):
             handicap = struct.unpack_from('<I', handicap_data, 4)[0]
         if save >= 64.3:
             data.read(4)
+        if save >= 67.5:
+            de_string(data)  # save_version 68: trailing per-player de_string
 
         players.append(dict(
             number=number,
@@ -575,6 +591,8 @@ def parse_de(data, version, save, skip=False):
         data.read(8)
         if save >= 37:
             timestamp, x = unpack('<II', data)
+        if save >= 67.5:
+            data.read(8)  # save_version 68: 8 trailing bytes before ai section
     rms_mod_id = None
     rms_filename = None
     for s in strings:

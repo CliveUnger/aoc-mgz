@@ -15,7 +15,7 @@ def parse_file_full(path):
             body.operation.parse_stream(f)
 
 
-def parse_file_fast(path):
+def parse_file_full_header_fast_body(path):
     with open(path, 'rb') as f:
         f.seek(0, 2)
         eof = f.tell()
@@ -36,19 +36,19 @@ class TestFiles(unittest.TestCase):
         parse_file_full('tests/recs/small.mgz')
         parse_file_full('tests/recs/de-13.07.aoe2record')
 
-    def test_files_fast(self):
+    def test_files_full_header_fast_body(self):
         # these files aren't supported by full header parser for now:
         skip = {"tests/recs/de-50.6-scenario.aoe2record", "tests/recs/de-50.6-scenario-with-triggers.aoe2record"}
 
         for path in glob.glob('tests/recs/*'):
             if path.replace("\\", "/") in skip:
                 continue
-            parse_file_fast(path)
+            parse_file_full_header_fast_body(path)
 
     @unittest.skip("This test is meant to be run manually when debugging issues in a specific rec")
     def test_single_rec(self):
         rec = "tests/recs/de-64.3.aoe2record"
-        parse_file_fast(rec)
+        parse_file_full_header_fast_body(rec)
         parse_file_summary(rec, FullSummary)
         parse_file_summary(rec, ModelSummary)
 

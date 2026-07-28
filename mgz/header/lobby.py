@@ -62,6 +62,7 @@ lobby = "lobby"/Struct(
             If(lambda ctx: find_save_version(ctx) >= 37, Bytes(4)),
             If(lambda ctx: find_save_version(ctx) >= 50, Bytes(1)),
             If(lambda ctx: find_save_version(ctx) >= 66.3, Bytes(4)),
+            If(lambda ctx: find_save_version(ctx) >= 67.5, Bytes(1)),
         )
     )
 )

@@ -53,13 +53,13 @@ class Player:
     objects: list
     profile_id: int
     timeseries: list[TimeseriesRow]
-    prefer_random: bool = None
+    prefer_random: bool = None  # type: ignore
     handicap: int = 100
-    team: list = None
-    team_id: int = None
+    team: list = None  # type: ignore
+    team_id: int = None  # type: ignore
     winner: bool = False
-    eapm: int = None
-    rate_snapshot: int = None
+    eapm: int = None  # type: ignore
+    rate_snapshot: int = None  # type: ignore
 
     def __repr__(self):
         return self.name
@@ -75,8 +75,8 @@ class Action:
     timestamp: timedelta
     type: ActionEnum
     payload: dict
-    player: Player = None
-    position: Position = None
+    player: Player = None  # type: ignore
+    position: Position = None  # type: ignore
 
 
 @dataclass
@@ -87,8 +87,8 @@ class Input:
     type: str
     param: str
     payload: dict
-    player: Player = None
-    position: Position = None
+    player: Player = None  # type: ignore
+    position: Position = None  # type: ignore
 
 
 @dataclass

@@ -268,7 +268,9 @@ action = "action"/Struct(
     "waiting"/Byte,
     "command_flag"/Byte,
     "selected_group_info"/If(lambda ctx: find_version(ctx) != Version.AOK, Int16ul),
-    "actions"/action_list
+    # 67.5+ no longer serializes inline actions here; the 2 bytes hold
+    # arbitrary values (raw pointers leak nearby) so RepeatUntil breaks on them
+    "actions"/IfThenElse(lambda ctx: find_save_version(ctx) >= 67.5, Bytes(2), action_list)
 )
 
 base_combat = "base_combat"/Struct(
@@ -363,7 +365,12 @@ unit_ai = "ai"/Struct(
     "look_around_timeout"/Int32ul,
     "defend_target"/Int32sl,
     "defense_buffer"/Float32l,
-    "last_world_position"/waypoint,
+    # 67.5+ shrank the waypoint padding from 3 to 1
+    "last_world_position"/IfThenElse(lambda ctx: find_save_version(ctx) >= 67.5, Struct(
+        vector,
+        "facet_to_next_waypoint"/Byte,
+        Padding(1)
+    ), waypoint),
     "de_2006_unk"/If(lambda ctx: 26.21 > find_save_version(ctx) >= 20.06, Struct(
         "unk_float"/Float32l,
         "unk"/Int32ul
@@ -377,6 +384,7 @@ unit_ai = "ai"/Struct(
     "stop_after_target_killed"/Byte,
     "state"/Byte,
     "state_position_x"/Float32l,
+    "de_unknown_68_ai"/If(lambda ctx: find_save_version(ctx) >= 67.5, Bytes(2)),
     "state_position_y"/Float32l,
     "time_since_enemy_sighting"/Int32ul,
     "alert_mode"/Byte,
@@ -394,7 +402,16 @@ unit_ai = "ai"/Struct(
     "formation_type"/Byte,
     "de_unk"/If(lambda ctx: find_version(ctx) == Version.DE, Bytes(4)),
     "de_unk_byte"/If(lambda ctx: find_save_version(ctx) >= 25.22, Byte),
-    "de_unknown_2"/If(lambda ctx: find_save_version(ctx) >= 63.0 and ctx._.has_ai in (15, 17), Bytes(4))
+    "de_unknown_2"/If(lambda ctx: find_save_version(ctx) >= 63.0 and ctx._.has_ai in (15, 17), Bytes(4)),
+    # 67.5+ appended a flag-prefixed position block
+    "de_position_68"/If(lambda ctx: find_save_version(ctx) >= 67.5, Struct(
+        "has_position"/Byte,
+        "data"/If(lambda ctx: ctx.has_position > 0, Struct(
+            "position"/vector,
+            "flag"/Byte,
+            Bytes(1),
+        )),
+    )),
 )
 
 
@@ -402,6 +419,7 @@ combat = "combat"/Struct(
     Embedded(base_combat),
     "de_pre"/If(lambda ctx: find_version(ctx) == Version.DE and find_save_version(ctx) < 37, Bytes(4)),
     "de"/If(lambda ctx: find_version(ctx) == Version.DE, Bytes(14)),
+    "de_unknown_68_1"/If(lambda ctx: find_save_version(ctx) >= 67.5, Bytes(8)),
     "de_unknown_66_3_1"/If(lambda ctx: find_save_version(ctx) >= 66.3, Bytes(4)),
     "de_2"/If(lambda ctx: find_save_version(ctx) >= 26.16, Bytes(16)),
     "de_3"/If(lambda ctx: 63 > find_save_version(ctx) >= 26.18, Bytes(1)),
@@ -453,6 +471,7 @@ combat = "combat"/Struct(
         )
     ),
     "de_unknown_64_3_1"/If(lambda ctx: find_save_version(ctx) >= 64.3, Byte),
+    "de_unknown_68_2"/If(lambda ctx: find_save_version(ctx) >= 67.5, Byte),
 )
 
 production_queue = "production_queue"/Struct(
