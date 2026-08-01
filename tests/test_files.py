@@ -9,7 +9,7 @@ def parse_file_full(path):
         f.seek(0, 2)
         eof = f.tell()
         f.seek(0)
-        h = header.parse_stream(f)
+        header.parse_stream(f)
         body.meta.parse_stream(f)
         while f.tell() < eof:
             body.operation.parse_stream(f)
@@ -20,7 +20,7 @@ def parse_file_full_header_fast_body(path):
         f.seek(0, 2)
         eof = f.tell()
         f.seek(0)
-        h = header.parse_stream(f)
+        header.parse_stream(f)
         fast.meta(f)
         while f.tell() < eof:
             fast.operation(f)

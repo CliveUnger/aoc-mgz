@@ -26,18 +26,18 @@ exclude = [
   "mgz/common/",
   "mgz/const.py",
   "mgz/enums.py",
-  "mgz/fast/",
   "mgz/header/",
   "mgz/model/__init__.py",
   "mgz/model/compat.py",
-  "mgz/model/definitions.py",
   "mgz/model/inputs.py",
   "mgz/reference.py",
   "mgz/summary/",
   "mgz/util.py",
-  "tests/",
-  "setup.py",
 ]
+
+[tool.ruff.lint]
+# RUF022: keep __all__ blocks sorted
+extend-select = ["RUF022"]
 
 [tool.ty.src]
 # Only type-check code we own.
@@ -48,7 +48,6 @@ exclude = [
   "mgz/common/",
   "mgz/const.py",
   "mgz/enums.py",
-  "mgz/fast/",
   "mgz/header/",
   "mgz/model/__init__.py",
   "mgz/model/compat.py",
@@ -56,6 +55,4 @@ exclude = [
   "mgz/reference.py",
   "mgz/summary/",
   "mgz/util.py",
-  "tests/",
-  "setup.py",
 ]

@@ -2,9 +2,36 @@
 
 from dataclasses import dataclass
 from datetime import timedelta, datetime
+from typing import Any, TypedDict
 from mgz.fast import Action as ActionEnum
 from mgz.fast import Age as AgeEnum
+from mgz.fast.actions import ActionPayload
 from mgz.util import Version
+
+
+class EnrichedActionPayload(ActionPayload, total=False):
+    """Action payload after model-layer enrichment (see enrich_action).
+
+    Extends the raw parser payload with name lookups for id keys; each is
+    None when the id is missing from the dataset/consts tables. enrich_action
+    also deletes `x`/`y` (promoted to Action.position) and parse_match
+    deletes `player_id` (promoted to Action.player).
+    """
+
+    technology: str | None
+    formation: str | None
+    stance: str | None
+    building: str | None
+    unit: str | None
+    command: str | None
+    order: str | None
+    resource: str | None
+
+
+class ChatInputPayload(TypedDict):
+    """Payload of a Chat-type Input."""
+
+    message: str
 
 
 @dataclass
@@ -28,6 +55,15 @@ class Object:
     instance_id: int
     index: int
     position: Position
+
+
+class StartingResources(TypedDict):
+    """Starting resource stockpile, read from the recorded game header."""
+
+    food: int
+    wood: int
+    stone: int
+    gold: int
 
 
 @dataclass
@@ -60,6 +96,7 @@ class Player:
     winner: bool = False
     eapm: int = None  # type: ignore
     rate_snapshot: int = None  # type: ignore
+    starting_resources: StartingResources | None = None
 
     def __repr__(self):
         return self.name
@@ -74,7 +111,7 @@ class Action:
 
     timestamp: timedelta
     type: ActionEnum
-    payload: dict
+    payload: EnrichedActionPayload
     player: Player = None  # type: ignore
     position: Position = None  # type: ignore
 
@@ -86,7 +123,7 @@ class Input:
     timestamp: timedelta
     type: str
     param: str
-    payload: dict
+    payload: EnrichedActionPayload | ChatInputPayload
     player: Player = None  # type: ignore
     position: Position = None  # type: ignore
 
@@ -167,11 +204,17 @@ class Uptime:
 
 @dataclass
 class Match:
-    """Represents a match."""
+    """Represents a match.
 
-    players: list
-    teams: list
-    gaia: list
+    Fields typed `| None` are unavailable for some game versions — most are
+    DE-only (guid, lobby, rated, build_version, timestamp, spec_delay,
+    allow_specs, hidden_civs, private, hash, team_together, lock_speed,
+    all_technologies, multiqueue, starting_age).
+    """
+
+    players: list[Player]
+    teams: list[list[Player]]
+    gaia: list[Object]
     map: Map
     file: File
     restored: bool
@@ -181,23 +224,23 @@ class Match:
     cheats: bool
     lock_teams: bool
     population: int
-    chat: list
-    guid: str
-    lobby: str
-    rated: bool
+    chat: list[Chat]
+    guid: str | None
+    lobby: str | None
+    rated: bool | None
     dataset: str
     type: str
     type_id: int
     map_reveal: str
     map_reveal_id: int
-    difficulty: str
+    difficulty: str | None
     difficulty_id: int
-    starting_age: str
-    starting_age_id: int
-    team_together: bool
-    lock_speed: bool
-    all_technologies: bool
-    multiqueue: bool
+    starting_age: str | None
+    starting_age_id: int | None
+    team_together: bool | None
+    lock_speed: bool | None
+    all_technologies: bool | None
+    multiqueue: bool | None
     duration: timedelta
     diplomacy_type: str
     completed: bool
@@ -205,14 +248,14 @@ class Match:
     version: Version
     game_version: str
     save_version: float
-    log_version: int
-    build_version: int
-    timestamp: datetime
-    spec_delay: timedelta
-    allow_specs: bool
-    hidden_civs: bool
-    private: bool
-    hash: str
-    actions: list
-    inputs: list
-    uptimes: list
+    log_version: int | None
+    build_version: int | None
+    timestamp: datetime | None
+    spec_delay: timedelta | None
+    allow_specs: bool | None
+    hidden_civs: bool | None
+    private: bool | None
+    hash: Any  # _hashlib.HASH for DE recs (serialize() calls .hexdigest()), else None
+    actions: list[Action]
+    inputs: list[Input]
+    uptimes: list[Uptime]

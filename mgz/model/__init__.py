@@ -25,29 +25,42 @@ TC_IDS = [71, 109, 141, 142]
 AI_ACTIONS = [ActionEnum.AI_ORDER]
 
 
-def enrich_action(action, action_data, dataset, consts):
-    """Enrich action data with lookups."""
-    if 'x' in action_data and 'y' in action_data and action_data['x'] >=0 and action_data['y'] >= 0:
-        if action.type != fast.Action.SPECIAL or ('target_id' in action_data and action_data['target_id'] > 0):
-            action.position = Position(action_data['x'], action_data['y'])
-            del action.payload['x']
-            del action.payload['y']
+def enrich_action(
+    action_type: ActionEnum,
+    action_data: ActionPayload,
+    dataset: dict,
+    consts: dict,
+) -> tuple[EnrichedActionPayload, Position | None]:
+    """Resolve a raw action payload's id references to names.
+
+    Returns a new enriched payload (the input is not modified) and the
+    position promoted from the raw `x`/`y` keys, or None when the action
+    carries no usable coordinates.
+    """
+    payload: EnrichedActionPayload = dict(action_data)
+    position = None
+    if 'x' in action_data and 'y' in action_data and action_data['x'] >= 0 and action_data['y'] >= 0:
+        if action_type != fast.Action.SPECIAL or ('target_id' in action_data and action_data['target_id'] > 0):
+            position = Position(action_data['x'], action_data['y'])
+            del payload['x']
+            del payload['y']
     if 'technology_id' in action_data:
-        action.payload['technology'] = dataset['technologies'].get(str(action_data['technology_id']))
+        payload['technology'] = dataset['technologies'].get(str(action_data['technology_id']))
     if 'formation_id' in action_data:
-        action.payload['formation'] = consts['formations'].get(str(action_data['formation_id']))
+        payload['formation'] = consts['formations'].get(str(action_data['formation_id']))
     if 'stance_id' in action_data:
-        action.payload['stance'] = consts['stances'].get(str(action_data['stance_id']))
+        payload['stance'] = consts['stances'].get(str(action_data['stance_id']))
     if 'building_id' in action_data:
-        action.payload['building'] = dataset['objects'].get(str(action_data['building_id']))
+        payload['building'] = dataset['objects'].get(str(action_data['building_id']))
     if 'unit_id' in action_data:
-        action.payload['unit'] = dataset['objects'].get(str(action_data['unit_id']))
+        payload['unit'] = dataset['objects'].get(str(action_data['unit_id']))
     if 'command_id' in action_data:
-        action.payload['command'] = consts['commands'].get(str(action_data['command_id']))
+        payload['command'] = consts['commands'].get(str(action_data['command_id']))
     if 'order_id' in action_data:
-        action.payload['order'] = consts['orders'].get(str(action_data['order_id']))
+        payload['order'] = consts['orders'].get(str(action_data['order_id']))
     if 'resource_id' in action_data:
-        action.payload['resource'] = consts['resources'].get(str(action_data['resource_id']))
+        payload['resource'] = consts['resources'].get(str(action_data['resource_id']))
+    return payload, position
 
 
 def get_difficulty(data):
@@ -189,6 +202,9 @@ def parse_match(handle):
             [],
             player.get('prefer_random'),
             player.get('handicap', 100),
+            starting_resources={
+                k: int(v) for k, v in player['starting_resources'].items()
+            } if player.get('starting_resources') else None,
         )
 
     # Assign teams
@@ -252,7 +268,7 @@ def parse_match(handle):
                         player.timeseries.append(TimeseriesRow(
                             timestamp=timedelta(milliseconds=stat_row['current_time']),
                             total_resources=stats['total_res'],
-                            total_objects=stats['obj_count']
+                            total_objects=stats['obj_count'],
                         ))
             elif op_type is fast.Operation.VIEWLOCK:
                 if op_data == last_viewlock:
@@ -281,15 +297,15 @@ def parse_match(handle):
                     )
             elif op_type is fast.Operation.ACTION:
                 action_type, action_data = op_data
-                action = Action(timedelta(milliseconds=timestamp), action_type, action_data)
+                payload, position = enrich_action(action_type, action_data, dataset, consts)
+                action = Action(timedelta(milliseconds=timestamp), action_type, payload, position=position)
                 if action_type is fast.Action.RESIGN and action_data['player_id'] in players:
                     resigned.append(players[action_data['player_id']])
                 if 'player_id' in action_data and action_data['player_id'] in players:
                     if action_type not in AI_ACTIONS:
                         eapm[action_data['player_id']] += 1
                     action.player = players[action_data['player_id']]
-                    del action.payload['player_id']
-                enrich_action(action, action_data, dataset, consts)
+                    del payload['player_id']
                 actions.append(action)
                 inputs.add_action(action)
             elif op_type is fast.Operation.POSTGAME and "leaderboards" in op_data:

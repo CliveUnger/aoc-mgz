@@ -7,7 +7,7 @@ import uuid
 import zlib
 from typing import Any, cast
 
-from mgz.util import Version, as_hex, get_version, unpack
+from mgz.util import Version, get_version, unpack
 
 PLAYER_END = b'\xff\xff\xff\xff\xff\xff\xff\xff.\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0b'
 ZLIB_WBITS = -15
@@ -118,7 +118,14 @@ def parse_player(header, player_number, num_players, save):
     type_, *diplomacy, name_length = unpack(f'<bx{num_players}x{rep}i5xh', header)
     name, resources = unpack(f'<{name_length - 1}s2xIx', header)
     resources_len = 8 if save >= 63 else 4
-    header.read(resources * resources_len)
+    attribute_data = header.read(resources * resources_len)
+    starting_resources = None
+    if resources >= 4:
+        # Attribute order matches the full parser's player_stats struct:
+        # food, wood, stone, gold. For save >= 63 the attributes are two
+        # consecutive float blocks; the values are in the first block.
+        food, wood, stone, gold = struct.unpack_from('<4f', attribute_data)
+        starting_resources = dict(food=food, wood=wood, stone=stone, gold=gold)
     start_x, start_y, civilization_id, color_id = unpack('<xff9xb3xbx', header)
     offset = header.tell()
     data = header.read()
@@ -167,7 +174,8 @@ def parse_player(header, player_number, num_players, save):
         position=dict(
             x=start_x,
             y=start_y
-        )
+        ),
+        starting_resources=starting_resources
     ), device
 
 
@@ -550,8 +558,8 @@ def parse_de(data, version, save, skip=False):
         data.read(236)
     if save >= 25.22:
         data.seek(-4, 1)
-        l = unpack('<I', data)
-        data.read(l * 4)
+        count = unpack('<I', data)
+        data.read(count * 4)
     for _ in range(unpack('<Q', data)):
         data.read(4)
         de_string(data)
